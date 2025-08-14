@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedConnect Europe - University Matcher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        .results-panel {
+            min-height: 600px;
+        }
+        .university-card-header {
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .university-card-header:hover {
+            background-color: #f8f9fa;
+        }
+        .university-card-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-in-out, padding 0.7s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .university-card-details.expanded {
+            max-height: 1500px;
+            padding-top: 1.25rem;
+            padding-bottom: 1.25rem;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #003366;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #002244;
+        }
+        /* Star styling */
+        .star {
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+        }
+        .star.starred {
+            color: #FFD700; /* Gold */
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+        }
+        .modal-content details {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .modal-content summary {
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #f1f1f1;
+        }
+        .modal-content .details-content {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+        #uk-qualification-filter {
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <header class="bg-[#003366] text-white p-5 text-center border-b-8 border-[#FFD700]">
+        <h1 class="text-4xl font-bold">MedConnect Europe</h1>
+        <p class="text-xl mt-1">Results Day University Matcher</p>
+    </header>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Input Panel -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                <h2 class="text-2xl font-bold text-[#003366] border-b-2 border-slate-200 pb-3 mb-6">Student Profile</h2>
+                
+                <form id="student-profile-form" class="space-y-6">
+                    <div>
+                        <label for="course" class="block mb-2 font-semibold text-slate-700">Desired Course</label>
+                        <select id="course" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:border-[#003366]">
+                            <option value="Medicine">Medicine</option>
+                            <option value="Dentistry">Dentistry</option>
+                            <option value="Veterinary Medicine">Veterinary Medicine</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="nationality" class="block mb-2 font-semibold text-slate-700">Qualifications / Nationality</label>
+                        <select id="nationality" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:border-[#003366]">
+                            <option value="UK">UK</option>
+                            <option value="IE">Ireland (Leaving Certificate)</option>
+                            <option value="Other">Other International</option>
+                        </select>
+                    </div>
+
+                    <div id="uk-qualification-filter">
+                        <label class="block mb-2 font-semibold text-slate-700">UK Qualification Type</label>
+                        <div class="flex space-x-4">
+                            <label><input type="radio" name="uk-qual" value="A-Levels" checked class="mr-2">A-Levels</label>
+                            <label><input type="radio" name="uk-qual" value="BTEC" class="mr-2">BTEC / Access to HE</label>
+                        </div>
+                    </div>
+
+                     <div>
+                        <label class="block mb-2 font-semibold text-slate-700">Country Preference</label>
+                        <div id="country-preference-list" class="space-y-2 max-h-48 overflow-y-auto p-2 border rounded-lg">
+                            <!-- FIX: Countries are now pre-populated directly in the HTML -->
+                            <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Bulgaria" class="flex-grow cursor-pointer">Bulgaria</label>
+                                <input type="checkbox" id="country-Bulgaria" data-country="Bulgaria" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Bulgaria">☆</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Cyprus" class="flex-grow cursor-pointer">Cyprus</label>
+                                <input type="checkbox" id="country-Cyprus" data-country="Cyprus" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Cyprus">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Georgia" class="flex-grow cursor-pointer">Georgia</label>
+                                <input type="checkbox" id="country-Georgia" data-country="Georgia" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Georgia">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Hungary" class="flex-grow cursor-pointer">Hungary</label>
+                                <input type="checkbox" id="country-Hungary" data-country="Hungary" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Hungary">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Italy" class="flex-grow cursor-pointer">Italy</label>
+                                <input type="checkbox" id="country-Italy" data-country="Italy" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Italy">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Latvia" class="flex-grow cursor-pointer">Latvia</label>
+                                <input type="checkbox" id="country-Latvia" data-country="Latvia" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Latvia">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Malta" class="flex-grow cursor-pointer">Malta</label>
+                                <input type="checkbox" id="country-Malta" data-country="Malta" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Malta">☆</span>
+                            </div>
+                             <div class="flex items-center justify-between p-2 hover:bg-slate-100 rounded-md">
+                                <label for="country-Poland" class="flex-grow cursor-pointer">Poland</label>
+                                <input type="checkbox" id="country-Poland" data-country="Poland" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                                <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="Poland">☆</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="grades" class="block mb-2 font-semibold text-slate-700">Achieved Grades (e.g., AAB, H3)</label>
+                        <input type="text" id="grades" placeholder="Optional, for reference" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:border-[#003366]">
+                    </div>
+
+                    <div class="space-y-4 pt-2">
+                        <label class="block font-semibold text-slate-700">Annual Budget Range</label>
+                        <div>
+                            <label for="min-budget" class="block text-sm font-medium text-slate-600">Minimum</label>
+                            <input type="range" id="min-budget" min="5000" max="25000" step="500" value="5000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <div id="min-budget-display" class="text-center font-bold text-[#003366] mt-1">€5,000</div>
+                        </div>
+                         <div>
+                            <label for="max-budget" class="block text-sm font-medium text-slate-600">Maximum</label>
+                            <input type="range" id="max-budget" min="5000" max="25000" step="500" value="25000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <div id="max-budget-display" class="text-center font-bold text-[#003366] mt-1">€25,000</div>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-8 space-y-4">
+                    <button id="find-options" class="w-full py-4 bg-[#FFD700] text-[#003366] rounded-lg text-xl font-bold hover:bg-amber-400 transition-colors duration-300 shadow-md hover:shadow-lg">
+                        Find My Options
+                    </button>
+                    <button id="reset-form" class="w-full py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition-colors duration-300">
+                        Reset for Next Student
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 results-panel">
+                <div id="top-three-section" class="results-section hidden">
+                    <h2 class="text-3xl font-bold text-[#003366] mb-4">⭐ Top 3 Recommendations</h2>
+                    <div id="top-three-results" class="space-y-4"></div>
+                </div>
+
+                <div id="other-options-section" class="results-section hidden mt-8">
+                    <h2 class="text-3xl font-bold text-[#003366] mb-4">Other Available Options</h2>
+                    <div id="other-results" class="space-y-4"></div>
+                </div>
+                
+                <div id="no-results" class="bg-rose-100 text-rose-800 border-l-4 border-rose-500 p-6 rounded-lg shadow-md hidden">
+                    <h3 class="font-bold text-xl">No suitable universities found.</h3>
+                    <p class="mt-2">Please adjust the filters or contact a MedConnect Europe advisor for a manual consultation.</p>
+                </div>
+
+                 <div id="welcome-message" class="bg-white p-8 rounded-xl shadow-lg text-center flex flex-col justify-center items-center h-full">
+                    <svg class="w-24 h-24 text-[#003366] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    <h2 class="text-3xl font-bold text-[#003366]">Ready to find the perfect university?</h2>
+                    <p class="text-slate-600 mt-2 max-w-md mx-auto">Fill in the student's profile on the left and click "Find My Options" to see a tailored list of universities.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <button id="open-guide-btn" class="fixed bottom-5 right-5 bg-[#003366] text-white p-4 rounded-full shadow-lg hover:bg-[#002244] transition-colors z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-5.247-7.497l10.494 0M12 21.747a9.75 9.75 0 100-19.5 9.75 9.75 0 000 19.5z"/></svg>
+    </button>
+
+    <div id="guide-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-guide-btn" class="float-right text-3xl font-bold cursor-pointer">&times;</span>
+            <h2 class="text-2xl font-bold text-[#003366] mb-4">The Golden Call Guide</h2>
+            <div class="prose max-w-none">
+                <details>
+                    <summary>Core Beliefs & Call Goals</summary>
+                    <div class="details-content">
+                        <p><strong>TO SELL = TO SERVE.</strong> Your certainty overcomes the prospect's uncertainty. Believe that our offer is the best thing for them if they're a good fit.</p>
+                        <p><strong>10 Areas to Uncover:</strong> Pain/Problem, Cost of Inaction, Dream Outcome, Roadblocks, Doubts, Finances, Decision Makers, Timing.</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Phase 1: Intro & Pre-frame</summary>
+                    <div class="details-content">
+                        <p><strong>Inbound:</strong> "Hi, this is [Your Name] from MedConnect Europe... What made you want to get on this call today?"</p>
+                        <p><strong>Pre-frame:</strong> "So [name], by the end of this call, my goal is for you to have absolute clarity on which university is best for you, and a step-by-step plan to secure an acceptance with your final grades. Does that work for you?"</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Phase 2: Eligibility & Discovery</summary>
+                    <div class="details-content">
+                        <p><strong>Confirm Grades:</strong> "So first off, can you share what your final grades are for both Biology and Chemistry?"</p>
+                        <p><strong>Uncover Pain Points:</strong> "What was your first pick of medical school and why did you choose it?... And if you don’t get an acceptance, then what happens then?"</p>
+                        <p><strong>Identify Roadblocks:</strong> "As things stand, what are going to be the biggest challenges for you to start applying? Is it parents, finances… just not knowing what school to choose?"</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Phase 3: Transition & Pitch</summary>
+                    <div class="details-content">
+                        <p><strong>Frame Value:</strong> "Alright - well you’re reaching out at a really good time because after Results Day, spaces can really get limited. Can I share the plan I recommend for you to maximize your chances of getting accepted this year?"</p>
+                        <p><strong>Share Recommendations:</strong> "Based on our discussion, I see two university options that fit best. The first one is [Recommendation 1]. This university [benefit 1] and also [benefit 2]. The second is [Recommendation 2] because you mentioned you want a school that [reason]..."</p>
+                        <p><strong>Pitch the Service:</strong> "So First, we are going to [handle legalisation] so that you can [have a stress-free application] while avoiding [costly mistakes]. Then, we will [provide exam resources] in order to [guarantee an 80%+ score] without having to [waste time searching for materials]. Lastly, we’ll [manage the entire relocation] so that you will be able to [settle in smoothly] and [focus on your studies from day one]. Do you see how this all fits together?"</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Phase 4: Our Services (Mandatory Points)</summary>
+                    <div class="details-content">
+                        <p><strong>Entrance Exam Support:</strong> "We guarantee at least 80% to pass if you use our study resources – textbooks written by us, online courses, mock exams, and video explanations for every single question."</p>
+                        <p><strong>Legalisation Process:</strong> "Have you ever heard of legalisation? It's a complex process of getting documents officially verified. The great news is that for UK students, we cover the entire cost and procedure for you."</p>
+                        <p><strong>Pre-Departure & Flight:</strong> "Once you get a place, we hold a pre-departure meeting for you and your parents to meet everyone. And for the first flight, it's on us. We book it for you, and our team will be at the airport to pick you up and take you to your hotel."</p>
+                        <p><strong>Post-Graduation Support:</strong> "As a team of doctors, we will help you transition back to the UK, with CV and interview skills, UKMLA exam support, and guidance on applying for FY1/FY2."</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Phase 5: Exploring Other Options & Closing</summary>
+                    <div class="details-content">
+                        <p><strong>The Pivot (After BG):</strong> "Before we conclude, have you explored options in other countries? Is there a specific reason you're focused on Bulgaria?"</p>
+                        <p><strong>Introduce Alternatives:</strong> "For example, in Romania, you can reserve a place with predicted grades and no exams. For Poland, a dental degree is 5 years, and flights are shorter."</p>
+                        <p><strong>The Backup Strategy:</strong> "Romania is a very good backup option. They give an answer way before Bulgarian universities, so if you don't get a place in BG, you're not left with limited options in September."</p>
+                        <p><strong>Close the Call:</strong> "I am going to send over an email with all of the information... and I’ll be sure to follow up tomorrow to see if you’re feeling good about everything. Sounds good?"</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>FAQs</summary>
+                    <div class="details-content">
+                        <p><strong>Discount?:</strong> "Our prices are the cheapest for the level of service provided. We include unique benefits like free legalisation and flights. However, we do offer a £100 referral fee which can be applied to your final instalment."</p>
+                        <p><strong>Price?:</strong> "Our prices vary. The best next step is to book a free consultation with our pre-admissions team who will discuss your eligibility and the full breakdown of our service fees."</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA WITH FULL DETAILS ---
+        const universities = [
+            { id: 1, name: "Sofia Medical University", country: "Bulgaria", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 10000, Dentistry: 9000 }, deadline: "2025-08-17", entryExam: true, reqs: { type: ["UK"], grades: "A-Level: C+", qual: ["A-Levels"] }, details: { pitch: "Sofia Medical University is the oldest and most prestigious medical university in Bulgaria. For students who want a globally-recognised degree from a historic institution without the high cost, this is a top-tier choice.", advantage: "**Foundation Year Pathway:** A key advantage here is the **Foundation Year**. It's a fantastic safety net that allows you to apply directly without an entry exam. It's important to know you can't apply for both direct entry and foundation, so we can help you choose the best strategy.", facts: "**Tuition:** €10,000 (Med) | €9,000 (Dent)<br>**Entry Req:** A-Levels: **C and above**, GCSEs (Science): **5+**<br>**Exam Fee:** €330<br>**Key Dates:** Internal Deadline: **17 Aug** | EU Exam: **16 Sept** | Non-EU Exam: **19 Sept** | Ranking Release: **24 Sept**<br>**Eligibility:** UK documents only.<br>**Note:** Students should aim for 100% in the highly competitive entry exam." } },
+            { id: 2, name: "Varna Medical University", country: "Bulgaria", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 10500, Dentistry: 10500 }, deadline: "2025-08-15", entryExam: true, reqs: { type: ["UK"], grades: "A-Level: D+", qual: ["A-Levels"] }, details: { pitch: "Varna offers a modern, high-tech university experience right on the beautiful Black Sea coast. It's the perfect balance for a student who wants serious academics and an amazing social life.", advantage: "**Clear Requirements:** Varna is very specific about its requirements, which means we can give you a very clear 'yes' or 'no' on eligibility, removing any guesswork.", facts: "**Tuition:** €10,500 (Med & Dent)<br>**Entry Req:** A-Levels: **D and above**, GCSE English: **6+**<br>**Exam Fee:** €330<br>**Key Dates:** Internal Deadline: **15 Aug** | Final Exam Date: **03 Sept (EU & UK applicants)** | Ranking Release: **Second week of Sept**<br>**Eligibility:** UK documents only." } },
+            { id: 3, name: "Trakia Medical University", country: "Bulgaria", courses: ["Medicine", "Veterinary Medicine"], tuition: { Medicine: 10000, "Veterinary Medicine": 10000 }, deadline: "2025-08-16", entryExam: true, reqs: { type: ["UK"], grades: "A-Level: D+", qual: ["A-Levels"] }, details: { pitch: "Trakia is a fantastic option for students looking for a high-quality degree with very accessible entry requirements and one of the most affordable tuition fees in Bulgaria.", advantage: "**Affordable Excellence:** We recommend Trakia for its incredible value. You get a fully recognised European degree for a very competitive price, and with an exam fee of only €250, the upfront costs are lower too.", facts: "**Tuition:** €10,000 (Medicine only)<br>**Entry Req:** A-Levels: **D and above**, GCSEs (Science): **4+**<br>**Exam Fee:** €250<br>**Key Dates:** Internal Deadline: **16 Aug** | Final Exam Date: **24/23 August** | Ranking Release: **28 Aug**<br>**Eligibility:** UK documents only." } },
+            { id: 4, name: "Burgas Medical University", country: "Bulgaria", courses: ["Medicine"], tuition: { Medicine: 10500 }, deadline: "2025-08-16", entryExam: true, reqs: { type: ["UK"], grades: "A-Level: D+", qual: ["A-Levels"] }, details: { pitch: "The key advantage of Burgas is its simpler, more straightforward admission process. For students who want to study on the beautiful Black Sea coast with a less stressful application, this is an excellent choice.", advantage: "**Insider Knowledge:** Our key sales point for Burgas is that it has an **easier admission process and a simpler entry exam**. This is a huge benefit for students who want to reduce stress and maximize their chances of success.", facts: "**Tuition:** €10,500 (Medicine only)<br>**Entry Req:** A-Levels: **D and above**, GCSEs (Science): **4+**<br>**Exam Fee:** €450<br>**Key Dates:** Internal Deadline: **16 Aug** | Final Exam Date: **09 Sept** | Ranking Release: **28 Aug**<br>**Eligibility:** UK documents only." } },
+            { id: 5, name: "Pleven Medical University", country: "Bulgaria", courses: ["Medicine"], tuition: { Medicine: 9000 }, deadline: "2025-09-24", entryExam: true, reqs: { type: ["UK", "Other"], grades: "A-Level: C+D", qual: ["A-Levels"] }, details: { pitch: "Pleven is a brilliant choice, especially as a strong backup. Our agency had a 100% acceptance rate last year, and it offers a flexible February start date.", advantage: "**100% Success Rate:** Our **100% acceptance rate** makes this a very safe bet for students applying with us. It's the perfect backup for a student applying to a competitive university like Sofia.", facts: "**Tuition:** €9,000 (Med)<br>**Entry Req:** A-Levels in **Biology & Chemistry required (grades C + D minimum)**<br>**Key Dates:** Internal Deadline: **24 Sept** | Exam Dates: **Sept, Oct, & Nov**<br>**Intake:** **February 2026**<br>**Eligibility:** Accepts qualifications from multiple countries." } },
+            { id: 6, name: "Plovdiv Medical University", country: "Bulgaria", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 10000, Dentistry: 9000 }, deadline: "2025-08-17", entryExam: true, reqs: { type: ["UK", "IE"], grades: "A-Level: D+", qual: ["A-Levels"] }, details: { pitch: "Plovdiv is one of the most popular and respected medical schools in Europe, named 'Best University' by the European Business Assembly. It's a top-tier choice in a vibrant, historic city.", advantage: "**Proven Success:** We have a long and successful history of placing students at Plovdiv. The university holds an orientation week in the last week of September, and our on-the-ground team is there to ensure our students are settled in and prepared from day one.", facts: "**Tuition:** €10,000 (Med) | €9,000 (Dent)<br>**Entry Req:** A-Levels: **D and above**, GCSEs (Science): **4+**, Irish LC: **H5+**<br>**Key Dates:** Internal Deadline: **17 Aug** | EU Passport Exam: **25 Aug (Note: British citizens are not EU passport holders and must follow the general application route)**<br>**Eligibility:** UK documents and Irish Leaving Cert only.<br>**Note:** Orientation is the last week of September." } },
+            { id: 7, name: "Medicampus Europeo", country: "Malta", courses: ["Medicine"], tuition: { Medicine: 14500 }, deadline: "2025-08-16", entryExam: true, reqs: { type: ["UK"], grades: "A-Level: D+", qual: ["A-Levels"] }, details: { pitch: "This is a unique opportunity to study medicine in a beautiful, English-speaking country. Malta is incredibly safe, and you'll earn a respected EU degree from a modern, state-of-the-art faculty with an easy entry process.", advantage: "**Easy Transition:** Because Malta is an English-speaking country, the cultural transition is one of the easiest in Europe. This is a huge comfort for many students and parents. The degree is awarded by Trakia University, an institution we know very well.", facts: "**Tuition:** €14,500 (upfront) or €15,500 (split)<br>**Entry Req:** A-Levels: **D and above**, GCSEs (Science): **4+**<br>**Key Dates:** Internal Deadline: **16 Aug** | Final Exam Date: **24/23 August** | Ranking Release: **28 Aug**<br>**Intake:** Fall intake only." } },
+            { id: 8, name: "Alte Medical University", country: "Georgia", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 5500, Dentistry: 5500 }, entryExam: false, reqs: { type: ["UK", "Other"], grades: "Pass", qual: ["A-Levels", "BTEC"] }, details: { pitch: "Georgia is the most direct and affordable route to a high-quality medical degree. There are no entrance exams, tuition is incredibly low, and the degrees are globally recognised. For a student who wants a guaranteed place this year without the stress of exams, this is the perfect solution.", advantage: "**The No-Exam Guarantee:** For a student who wants a guaranteed place this year without the stress of exams, this is the perfect solution.", facts: "**Tuition:** $5,500 (Y1-2) / $6,500 (Y3-6)<br>**Intakes:** October & March<br>**Key Sales Point:** It's the only programme in Georgia **specifically tailored to GMC guidelines** and has a partnership with the largest hospital in Tbilisi.", entry: "Requires **3 A-Levels (passing grades)**, a **BTEC Level 3**, or an **Access to HE** qualification." } },
+            { id: 9, name: "Tbilisi Medical Academy", country: "Georgia", courses: ["Medicine"], tuition: { Medicine: 7000 }, entryExam: false, reqs: { type: ["UK", "Other"], grades: "Pass", qual: ["A-Levels", "BTEC"] }, details: { pitch: "Georgia is the most direct and affordable route. Tbilisi Medical Academy has a long history of its graduates registering with the UK GMC and practising as doctors.", advantage: "**The No-Exam Guarantee:** A stress-free route to a recognised medical degree.", facts: "**Tuition:** $7,000/year<br>**Intakes:** October & March<br>**Key Sales Point:** Has a long and proven track record of its graduates **registering with the UK GMC and practising as doctors** in the NHS.", entry: "Requires **3 A-Levels (passing grades)**, a **BTEC Level 3**, or an **Access to HE** qualification." } },
+            { id: 10, name: "Caucasus International University", country: "Georgia", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 6000, Dentistry: 5000 }, entryExam: false, reqs: { type: ["UK", "Other"], grades: "Pass", qual: ["A-Levels", "BTEC"] }, details: { pitch: "Georgia is the most direct and affordable route. Caucasus is home to the longest-running and most established dentistry programme in Tbilisi.", advantage: "**The No-Exam Guarantee:** A top choice for aspiring dentists who want to avoid entrance exams.", facts: "**Tuition:** $6,000 (Med) | $5,000 (Dent)<br>**Intakes:** October & March<br>**Key Sales Point:** Home to the **longest-running dentistry programme** in Tbilisi; students are already registered for ORE.", entry: "Requires **3 A-Levels (passing grades)**, a **BTEC Level 3**, or an **Access to HE** qualification." } },
+            { id: 11, name: "Tbilisi State Medical University", country: "Georgia", courses: ["Medicine"], tuition: { Medicine: 8000 }, entryExam: false, reqs: { type: ["UK", "Other"], grades: "Pass", qual: ["A-Levels", "BTEC"] }, details: { pitch: "Georgia is the most direct and affordable route. TSMU is the oldest and most prestigious state medical university in the country.", advantage: "**The No-Exam Guarantee:** A chance to get into a highly prestigious state university without an entrance exam.", facts: "**Tuition:** $8,000/year<br>**Intakes:** October & March<br>**Key Sales Point:** The **oldest and most prestigious state medical university** in Georgia.", entry: "Requires **3 A-Levels (passing grades)**, a **BTEC Level 3**, or an **Access to HE** qualification." } },
+            { id: 12, name: "Medical University of Silesia", country: "Poland", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 14000, Dentistry: 15000 }, deadline: "2025-08-15", entryExam: true, reqs: { type: ["UK", "IE"], grades: "A-Level: C+D", qual: ["A-Levels", "BTEC"] }, details: { pitch: "A highly respected Polish university that is great for students from a wider range of educational backgrounds, as it's one of the few that officially accepts BTEC and Access to HE qualifications.", advantage: "**The BTEC/Access Pathway:** If you have a student with these qualifications, this is one of your go-to options.", facts: "**Tuition:** €14,000 (Med) | €15,000 (Dent)<br>**Intakes:** Fall & Spring<br>**Internal Deadline:** 15 Aug<br>**Entry Req:** 3 A-Levels (**CDs min**, Biology is a must + Chem/Maths/Phys) or BTEC/Access. Students with DDs cannot go.<br>**Dentistry:** C+D min (A-Levels) | H3+H5 (Irish LC)", entry: "**Students without Bio & Chem can still apply by sitting the university's exams**." } },
+            { id: 13, name: "Wroclaw Medical University", country: "Poland", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 14000, Dentistry: 15000 }, deadline: "2025-08-16", entryExam: true, reqs: { type: ["UK", "IE"], grades: "A-Level: B+D", qual: ["A-Levels", "BTEC"] }, details: { pitch: "Wroclaw is one of Poland's most prestigious medical universities with a rich scientific heritage. A top-tier institution for students with strong science grades.", advantage: "**The Prestige Option:** For students motivated by brand and history, Wroclaw is an easy sell. The connection to famous scientists like Alzheimer is a great talking point.", facts: "**Tuition:** €14,000 (Med) | €15,000 (Dent)<br>**Intake:** Fall only<br>**Internal Deadline:** 16 Aug<br>**Entry Req:** 3 A-Levels (Biology compulsory + Chem/Maths/Phys) or BTEC/Access.<br>**Dentistry:** A-Level **B+D** min | Irish LC **H3+H5** min.", entry: "An entrance exam is required." } },
+            { id: 14, name: "Andrzej Frycz Modrzewski Krakow University", country: "Poland", courses: ["Medicine"], tuition: { Medicine: 15000 }, deadline: "2025-08-20", entryExam: false, reqs: { type: ["UK", "IE"], grades: "A-Level: E", qual: ["A-Levels"] }, details: { pitch: "UAFM is a revolutionary choice because it requires no entrance exams or interviews. Admission is based purely on your grades. It is the most direct and stress-free route to a GMC-recognised degree in Poland.", advantage: "**The No-Exam Guarantee:** This is the biggest selling point. We can tell a student with confidence that if their grades are good enough, they are in. It removes months of stress.", facts: "**Tuition:** €15,000/year<br>**Intake:** October only<br>**Internal Deadline:** 20 Aug<br>**Entry Req:** Secondary school exams in Bio, Chem, Phys, or Maths with **at least Grade E**.", entry: "No separate university entrance exam is needed." } },
+            { id: 15, name: "Riga Stradins University", country: "Latvia", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 13500, Dentistry: 15500 }, deadline: "2025-09-23", entryExam: false, reqs: { type: ["UK", "IE", "Other"], grades: "A-Level: CCC/CCD", qual: ["A-Levels", "BTEC"] }, details: { pitch: "RSU is a top Northern European medical school that offers direct admission with no entrance exam. It's GMC-accredited and famous for its small class sizes.", advantage: "**The Direct Admission Route:** This is a fantastic no-exam option that removes a lot of stress. The February start date also provides a great alternative for students who need more time to prepare for their move.", facts: "**Tuition:** €13,500+ (Med) | €15,500 (Dent)<br>**Entry Requirements:** 3 A-Levels (**CCC/CCD**), BTEC & Access courses are accepted.<br>**Key Dates:** Internal Deadline (Non-EU/British): **23 Sept** | Internal Deadline (EU): **24 Nov** | Intake: **February 2026**", entry: "Subjects must include Maths/Physics + Chemistry/Biology + a third subject." } },
+            { id: 16, name: "European University Cyprus (EUC)", country: "Cyprus", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 22000, Dentistry: 22000 }, deadline: "2025-08-25", entryExam: false, reqs: { type: ["UK", "IE", "Other"], grades: "A-Level: Bio+", qual: ["A-Levels"] }, details: { pitch: "EUC offers a direct path to a degree without the stress of an entrance exam. It's a modern university in a beautiful Mediterranean location, and they have a great foundation year option for those who don't meet the direct entry grades.", advantage: "**The No-Exam Pathway:** This is a perfect no-exam solution. The Foundation Year is a great safety net, allowing students to apply with just their GCSEs if their A-Levels aren't what they hoped for.", facts: "**Tuition:** ~€21,000–€23,000/year<br>**Entry Requirements:** **Mandatory: Biology + one of Chem/Maths/Physics**.<br>**Key Dates:** Internal Deadline: **25 Aug**<br>**Intakes:** Fall & Spring intakes available.", entry: "A **Foundation Year** is available for those not meeting direct admission criteria (can apply with GCSEs/IGCSEs, A-Levels not mandatory)." } },
+            { id: 17, name: "Academy of Silesia", country: "Poland", courses: ["Medicine"], tuition: { Medicine: 14000 }, deadline: "2025-08-16", entryExam: true, reqs: { type: ["UK", "IE"], grades: "A-Level: D", qual: ["A-Levels", "BTEC"] }, details: { pitch: "This university offers a clever, strategic route. If you have A-Levels in Biology plus another science with a Grade D, you can get in with no entrance exam.", advantage: "**The Strategic Exemption:** We can quickly identify if a student is eligible for the exam exemption, making this a very attractive and fast option for them.", facts: "**Tuition:** Y1–2: **€14,000**, Y3–4: **€15,500**, Y5–6: **€16,000**<br>**Intakes:** Sept/Oct & March<br>**Internal Deadline:** 16 Aug<br>**Key Sales Point:** No exam if you have **Bio + Chem/Phys/Maths (D min)**.", entry: "An entrance exam is required **only if you don't have A-Levels in Biology + another science**." } },
+            { id: 18, name: "University of Debrecen", country: "Hungary", courses: ["Medicine", "Dentistry"], tuition: { Medicine: 15000, Dentistry: 15500, Foundation: 5500 }, deadline: "2025-08-17", entryExam: true, reqs: { type: ["UK", "IE"], grades: "N/A", qual: ["A-Levels"] }, details: { pitch: "Debrecen is one of the most prestigious universities in Central Europe. For 2025 entry, the main route is their excellent Foundation Year, a guaranteed pathway into the main degree.", advantage: "**The Foundation Pathway:** This removes the stress of immediate exams and prepares the student for success. If a student wants direct entry, they must defer to 2026.", facts: "**Tuition:** €5,500 (Foundation), €15,000 (Med), €15,500 (Dent)<br>**Additional Fees:** App: ~€120 + Exam: ~€300<br>**Internal Deadline:** 17 Aug<br>**Entry Route:** **Foundation Year only (guaranteed entry to Y1 after completion)**.", entry: "**BTEC is not accepted**. Direct entry into Year 1 requires passing Bio & Chem exams." } },
+            { id: 19, name: "UniCamillus", country: "Italy", courses: ["Medicine"], tuition: { Medicine: 21000 }, deadline: "2025-08-30", entryExam: true, reqs: { type: ["UK", "IE", "Other"], grades: "A-Level: E", qual: ["A-Levels", "BTEC"] }, details: { pitch: "UniCamillus offers the incredible opportunity to study medicine in Rome. It's a truly international university, and the great news is that it's very accessible for students with a wide range of grades, including BTEC and Access courses.", advantage: "**The Rome Opportunity:** For many students, the chance to live and study in Rome is a dream come true. We can make that happen, and the scholarship opportunities from year 2 make it financially attractive.", facts: "**Tuition:** €21,000 (Y1), then ~€15,000+ with **15-25% scholarships for all**.<br>**Key Dates:** Internal Deadline: **30 Aug** | Entry Exam: **25 Sept**<br>**Intake:** Spring intake only.", entry: "An entry exam is **mandatory for all applicants**, even if they don't have Bio and Chem. Accepts A-Levels (min E), BTEC, and Access courses." } }
+        ];
+
+        // --- DOM ELEMENTS & SCRIPT LOGIC ---
+        const courseSelect = document.getElementById('course');
+        const nationalitySelect = document.getElementById('nationality');
+        const ukQualFilter = document.getElementById('uk-qualification-filter');
+        const countryPreferenceList = document.getElementById('country-preference-list');
+        const minBudgetSlider = document.getElementById('min-budget');
+        const minBudgetDisplay = document.getElementById('min-budget-display');
+        const maxBudgetSlider = document.getElementById('max-budget');
+        const maxBudgetDisplay = document.getElementById('max-budget-display');
+        const findButton = document.getElementById('find-options');
+        const resetButton = document.getElementById('reset-form');
+        const topThreeResultsDiv = document.getElementById('top-three-results');
+        const otherResultsDiv = document.getElementById('other-results');
+        const topThreeSection = document.getElementById('top-three-section');
+        const otherOptionsSection = document.getElementById('other-options-section');
+        const noResultsDiv = document.getElementById('no-results');
+        const welcomeMessageDiv = document.getElementById('welcome-message');
+        const guideModal = document.getElementById('guide-modal');
+        const openGuideBtn = document.getElementById('open-guide-btn');
+        const closeGuideBtn = document.getElementById('close-guide-btn');
+        const studentProfileForm = document.getElementById('student-profile-form');
+
+        // --- DYNAMIC POPULATION ---
+        function populateCountries() {
+            const countries = [...new Set(universities.map(uni => uni.country))];
+            countries.sort();
+            countryPreferenceList.innerHTML = '';
+            countries.forEach(country => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 hover:bg-slate-100 rounded-md';
+                div.innerHTML = `
+                    <label for="country-${country}" class="flex-grow cursor-pointer">${country}</label>
+                    <input type="checkbox" id="country-${country}" data-country="${country}" class="form-checkbox h-5 w-5 text-[#003366] rounded focus:ring-[#FFD700] cursor-pointer">
+                    <span class="star text-2xl text-slate-300 hover:text-amber-300 ml-3" data-country="${country}">☆</span>
+                `;
+                countryPreferenceList.appendChild(div);
+            });
+            
+            document.querySelectorAll('.star').forEach(star => {
+                star.addEventListener('click', () => {
+                    const selectedCountry = star.dataset.country;
+                    document.querySelectorAll('.star').forEach(s => {
+                        if (s.dataset.country !== selectedCountry) {
+                            s.classList.remove('starred');
+                            s.textContent = '☆';
+                        }
+                    });
+                    star.classList.toggle('starred');
+                    star.textContent = star.classList.contains('starred') ? '★' : '☆';
+                });
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            populateCountries();
+            ukQualFilter.style.display = 'block'; // Show by default as UK is pre-selected
+
+            nationalitySelect.addEventListener('change', () => {
+                ukQualFilter.style.display = (nationalitySelect.value === 'UK') ? 'block' : 'none';
+            });
+
+            minBudgetSlider.addEventListener('input', () => {
+                minBudgetDisplay.textContent = `€${parseInt(minBudgetSlider.value).toLocaleString()}`;
+                if (parseInt(minBudgetSlider.value) > parseInt(maxBudgetSlider.value)) {
+                    maxBudgetSlider.value = minBudgetSlider.value;
+                    maxBudgetDisplay.textContent = `€${parseInt(maxBudgetSlider.value).toLocaleString()}`;
+                }
+            });
+            
+            maxBudgetSlider.addEventListener('input', () => {
+                maxBudgetDisplay.textContent = `€${parseInt(maxBudgetSlider.value).toLocaleString()}`;
+                 if (parseInt(maxBudgetSlider.value) < parseInt(minBudgetSlider.value)) {
+                    minBudgetSlider.value = maxBudgetSlider.value;
+                    minBudgetDisplay.textContent = `€${parseInt(minBudgetSlider.value).toLocaleString()}`;
+                }
+            });
+
+            findButton.addEventListener('click', () => {
+                welcomeMessageDiv.style.display = 'none';
+                const desiredCourse = courseSelect.value;
+                const nationality = nationalitySelect.value;
+                const selectedCountries = Array.from(document.querySelectorAll('#country-preference-list input[type="checkbox"]:checked')).map(cb => cb.dataset.country);
+                const starredCountryEl = document.querySelector('.star.starred');
+                const starredCountry = starredCountryEl ? starredCountryEl.dataset.country : null;
+                const minBudget = parseInt(minBudgetSlider.value);
+                const maxBudget = parseInt(maxBudgetSlider.value);
+                const today = new Date("2025-08-14");
+                const ukQual = document.querySelector('input[name="uk-qual"]:checked').value;
+
+                let eligibleUniversities = universities.filter(uni => {
+                    let tuition = uni.tuition[desiredCourse];
+                    if (uni.name === 'University of Debrecen') {
+                        tuition = uni.tuition.Foundation;
+                    }
+                    
+                    if (!uni.courses.includes(desiredCourse)) return false;
+                    if (tuition === undefined) return false;
+                    if (tuition < minBudget || tuition > maxBudget) return false;
+                    if (!uni.reqs.type.includes(nationality)) return false;
+                    if (nationality === 'UK' && !uni.reqs.qual.includes(ukQual)) return false;
+                    if (selectedCountries.length > 0 && !selectedCountries.includes(uni.country)) return false;
+                    if (uni.deadline) {
+                        const deadline = new Date(uni.deadline);
+                        if (deadline < today) return false;
+                    }
+                    return true;
+                });
+                
+                eligibleUniversities.forEach(uni => {
+                    let score = 0;
+                    if (uni.country === starredCountry) score += 2000;
+                    else if (selectedCountries.includes(uni.country)) score += 1000;
+                    if (uni.entryExam === false) score += 1000;
+                    if (uni.details.pitch.toLowerCase().includes("easy") || uni.details.pitch.toLowerCase().includes("100% acceptance")) score += 500;
+                    let tuitionForScore = uni.tuition[desiredCourse] || uni.tuition.Foundation || 25000;
+                    score += (25000 - tuitionForScore) / 20;
+                    if (uni.reqs.grades.includes("D") || uni.reqs.grades.includes("Pass") || uni.reqs.grades.includes("E")) score += 100;
+                    uni.score = score;
+                });
+
+                eligibleUniversities.sort((a, b) => b.score - a.score);
+                displayResults(eligibleUniversities, desiredCourse);
+            });
+            
+            resetButton.addEventListener('click', () => {
+                studentProfileForm.reset();
+                minBudgetDisplay.textContent = '€5,000';
+                maxBudgetDisplay.textContent = '€25,000';
+                document.querySelectorAll('#country-preference-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+                document.querySelectorAll('.star').forEach(s => {
+                    s.classList.remove('starred');
+                    s.textContent = '☆';
+                });
+                topThreeSection.style.display = 'none';
+                otherOptionsSection.style.display = 'none';
+                noResultsDiv.style.display = 'none';
+                welcomeMessageDiv.style.display = 'flex';
+            });
+            
+            openGuideBtn.onclick = () => guideModal.style.display = "block";
+            closeGuideBtn.onclick = () => guideModal.style.display = "none";
+            window.onclick = (event) => {
+                if (event.target == guideModal) {
+                    guideModal.style.display = "none";
+                }
+            }
+        });
+
+        function displayResults(unis, course) {
+            topThreeResultsDiv.innerHTML = '';
+            otherResultsDiv.innerHTML = '';
+            topThreeSection.style.display = 'none';
+            otherOptionsSection.style.display = 'none';
+            noResultsDiv.style.display = 'none';
+            
+            if (unis.length === 0) {
+                noResultsDiv.style.display = 'block';
+                return;
+            }
+
+            const topThree = unis.slice(0, 3);
+            const others = unis.slice(3);
+
+            if (topThree.length > 0) {
+                topThreeSection.style.display = 'block';
+                topThree.forEach(uni => topThreeResultsDiv.innerHTML += createUniversityCard(uni, course, true));
+            }
+
+            if (others.length > 0) {
+                otherOptionsSection.style.display = 'block';
+                others.forEach(uni => otherResultsDiv.innerHTML += createUniversityCard(uni, course, false));
+            }
+            
+            document.querySelectorAll('.university-card-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const details = header.nextElementSibling;
+                    details.classList.toggle('expanded');
+                });
+            });
+        }
+        
+        function createUniversityCard(uni, course, isTopThree) {
+            let highlightText = uni.entryExam ? 'Entry Exam Required' : 'NO Entry Exam';
+            if (uni.name === "University of Debrecen") highlightText = "Foundation Year Entry";
+            let highlightClass = uni.entryExam ? 'text-amber-600' : 'text-green-600';
+            let tuitionFee = uni.tuition[course] ? `€${uni.tuition[course].toLocaleString()}` : 'N/A';
+            if (uni.name === 'University of Debrecen') {
+                tuitionFee = `€${uni.tuition.Foundation.toLocaleString()} (Foundation)`
+            }
+            let cardBorder = isTopThree ? 'border-l-8 border-[#FFD700]' : 'border-l-8 border-[#003366]';
+
+            return `
+                <div class="university-card bg-white rounded-xl shadow-md ${cardBorder}">
+                    <div class="university-card-header p-5 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                        <div class="col-span-2 md:col-span-1">
+                            <div class="font-bold text-lg text-[#003366]">${uni.name}</div>
+                            <div class="text-sm text-slate-500">${uni.country}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-slate-500 uppercase font-semibold">Tuition Fee</div>
+                            <div class="font-bold text-lg">${tuitionFee}/year</div>
+                        </div>
+                        <div class="text-center">
+                             <div class="text-xs text-slate-500 uppercase font-semibold">Key Info</div>
+                             <div class="font-bold text-lg ${highlightClass}">${highlightText}</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-slate-500 uppercase font-semibold">Grades</div>
+                            <div class="font-bold text-lg">${uni.reqs.grades}</div>
+                        </div>
+                    </div>
+                    <div class="university-card-details px-5 border-t border-slate-200">
+                        <div class="prose max-w-none text-slate-700">
+                            <p class="italic"><strong>The Pitch for the Call:</strong> ${uni.details.pitch.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
+                            <h4 class="font-bold text-[#003366]">The MedConnect Advantage:</h4>
+                            <p>${uni.details.advantage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
+                            <h4 class="font-bold text-[#003366]">Key Facts:</h4>
+                            <p>${uni.details.facts.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
